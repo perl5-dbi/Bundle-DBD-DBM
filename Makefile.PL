@@ -4,8 +4,9 @@ use 5.008;
 use strict;
 use warnings;
 use ExtUtils::MakeMaker;
+use DBI::DBD;
 
-WriteMakefile1(
+my %opts = (
     MIN_PERL_VERSION => '5.008',
     META_MERGE       => {
                     resources => {
@@ -13,6 +14,11 @@ WriteMakefile1(
                                   MailingList => 'mailto:dbi-dev@perl.org',
                                   license     => 'http://dev.perl.org/licenses/',
                                  },
+		    recommends => {
+		       'NDBM_File' => 0,
+		       'ODBM_File' => 0,
+		       'GDBM_File' => 0,
+		    },
                   },
     NAME          => 'Bundle::DBD::DBM',
     VERSION_FROM  => 'lib/Bundle/DBD/DBM.pm',
@@ -43,6 +49,14 @@ WriteMakefile1(
     AUTHOR => 'Jens Rehsack <rehsack@cpan.org>',
     test   => { TESTS => 't/*.t xt/*.t' },
               );
+
+WriteMakefile1(
+    dbd_edit_mm_attribs(\%opts, {
+	create_pp_tests => 1,
+	create_nano_tests => 1,
+	create_gap_tests => 1,
+    })
+);
 
 sub WriteMakefile1
 {    #Written by Alexandr Ciornii, version 0.21. Added by eumm-upgrade.

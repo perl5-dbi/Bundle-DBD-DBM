@@ -35,7 +35,7 @@ BEGIN
     }
 
     # Potential DBM modules in preference order (SDBM_File first)
-    # skip NDBM and ODBM as they don't support EXISTS
+    # XXX skip NDBM and ODBM as they don't support EXISTS
     my @dbms     = qw(SDBM_File GDBM_File DB_File BerkeleyDB NDBM_File ODBM_File);
     my @use_dbms = @ARGV;
     if ( !@use_dbms && $ENV{DBD_DBM_TEST_BACKENDS} )
@@ -43,7 +43,9 @@ BEGIN
         @use_dbms = split ' ', $ENV{DBD_DBM_TEST_BACKENDS};
     }
 
-    if ( lc "@use_dbms" eq "all" )
+    # In contrast to DBIs tests of DBD::DBM this module tries to test against
+    # all available DBM's - hopefully not to many broken installations ...
+    if ( ( lc "@use_dbms" eq "all" ) || ( 0 == scalar(@use_dbms) ) )
     {
         # test with as many of the major DBM types as are available
         @dbm_types = grep {
@@ -53,21 +55,6 @@ BEGIN
     elsif (@use_dbms)
     {
         @dbm_types = @use_dbms;
-    }
-    else
-    {
-        # we only test SDBM_File by default to avoid tripping up
-        # on any broken DBM's that may be installed in odd places.
-        # It's only DBD::DBM we're trying to test here.
-        # (However, if SDBM_File is not available, then use another.)
-        for my $dbm (@dbms)
-        {
-            if ( eval { local $^W; require "$dbm.pm" } )
-            {
-                @dbm_types = ($dbm);
-                last;
-            }
-        }
     }
 
     if ( eval { require List::MoreUtils; } )

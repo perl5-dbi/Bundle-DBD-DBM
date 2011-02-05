@@ -34,31 +34,25 @@ BEGIN {
     }
 
     # Potential DBM modules in preference order (SDBM_File first)
-    # skip NDBM and ODBM as they don't support EXISTS
+    # XXX skip NDBM and ODBM as they don't support EXISTS
     my @dbms = qw(SDBM_File GDBM_File DB_File BerkeleyDB NDBM_File ODBM_File);
     my @use_dbms = @ARGV;
     if( !@use_dbms && $ENV{DBD_DBM_TEST_BACKENDS} ) {
 	@use_dbms = split ' ', $ENV{DBD_DBM_TEST_BACKENDS};
     }
 
-    if (lc "@use_dbms" eq "all") {
-	# test with as many of the major DBM types as are available
-        @dbm_types = grep { eval { local $^W; require "$_.pm" } } @dbms;
+    # In contrast to DBIs tests of DBD::DBM this module tries to test against
+    # all available DBM's - hopefully not to many broken installations ...
+    if ( ( lc "@use_dbms" eq "all" ) || ( 0 == scalar(@use_dbms) ) )
+    {
+        # test with as many of the major DBM types as are available
+        @dbm_types = grep {
+            eval { local $^W; require "$_.pm" }
+        } @dbms;
     }
-    elsif (@use_dbms) {
-	@dbm_types = @use_dbms;
-    }
-    else {
-	# we only test SDBM_File by default to avoid tripping up
-	# on any broken DBM's that may be installed in odd places.
-	# It's only DBD::DBM we're trying to test here.
-        # (However, if SDBM_File is not available, then use another.)
-        for my $dbm (@dbms) {
-            if (eval { local $^W; require "$dbm.pm" }) {
-                @dbm_types = ($dbm);
-                last;
-            }
-        }
+    elsif (@use_dbms)
+    {
+        @dbm_types = @use_dbms;
     }
 
     if( eval { require List::MoreUtils; } )
@@ -136,8 +130,8 @@ my %tests_statement_results = (
     ],
 );
 
-print "Using DBM modules: @dbm_types\n";
-print "Using MLDBM serializers: @mldbm_types\n" if @mldbm_types;
+note "Using DBM modules: @dbm_types";
+note "Using MLDBM serializers: @mldbm_types" if @mldbm_types;
 
 my %test_statements;
 my %expected_results;
@@ -233,7 +227,7 @@ sub do_test {
         my $comment = $1;
 
         my $sth = $dbh->prepare($sql);
-        ok($sth, "prepare $sql") or diag($dbh->errstr || 'unknown error');
+        ok($sth, "prepare '$sql' using dbm='$dtype' mldbm='$mldbm'") or diag($dbh->errstr || 'unknown error');
 
 	my @bind;
 	if($sth->{NUM_OF_PARAMS})
@@ -256,7 +250,7 @@ sub do_test {
 	my $allrows = $sth->fetchall_arrayref();
 	my $expected_rows = $results[$idx];
 	is( $sth->rows, scalar( @{$expected_rows} ), $sql );
-	is_deeply( $allrows, $expected_rows, 'SELECT results' );
+	is_deeply( $allrows, $expected_rows, "SELECT results using dbm='$dtype' mldbm='$mldbm'" );
     }
     $dbh->disconnect;
     return 1;
